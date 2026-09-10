@@ -1,0 +1,45 @@
+apiVersion: apps/v1
+kind: Deployment
+
+metadata:
+  name: employee-app
+
+spec:
+  replicas: 3
+
+  selector:
+    matchLabels:
+      app: employee-app
+
+  template:
+    metadata:
+      labels:
+        app: employee-app
+
+    spec:
+      containers:
+        - name: employee-app
+
+          image: jagruthiacr.azurecr.io/employee-app:2.0
+
+          ports:
+            - containerPort: 3000
+
+          env:
+            - name: DB_HOST
+              value: "webappdemo-psql.postgres.database.azure.com"
+
+            - name: DB_PORT
+              value: "5432"
+
+            - name: DB_NAME
+              value: "appdb"
+
+            - name: DB_USER
+              value: "webappadmin"
+
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: employee-db-secret
+                  key: DB_PASSWORD

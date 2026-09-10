@@ -1,0 +1,22 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+
+metadata:
+  name: employee-app-ingress
+
+  annotations:
+    kubernetes.io/ingress.class: azure/application-gateway
+
+spec:
+  rules:
+    - http:
+        paths:
+          - path: /
+            pathType: Prefix
+
+            backend:
+              service:
+                name: employee-app-service
+                port:
+                  number: 80
+                  
