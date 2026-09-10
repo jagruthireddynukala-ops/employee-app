@@ -3,9 +3,9 @@ kind: Ingress
 
 metadata:
   name: employee-app-ingress
-
   annotations:
     kubernetes.io/ingress.class: azure/application-gateway
+    appgw.ingress.kubernetes.io/use-private-ip: "true"
 
 spec:
   rules:
