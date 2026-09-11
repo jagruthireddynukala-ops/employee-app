@@ -1,4 +1,5 @@
 
+
 name: Employee App CI/CD
 
 on:
@@ -29,7 +30,28 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # 2. Login to Azure using GitHub OIDC
+      # 2. Check that GitHub Azure secrets are available
+      - name: Check Azure Secrets
+        shell: bash
+        run: |
+          if [ -z "${{ secrets.AZURE_CLIENT_ID }}" ]; then
+            echo "AZURE_CLIENT_ID is missing"
+            exit 1
+          fi
+
+          if [ -z "${{ secrets.AZURE_TENANT_ID }}" ]; then
+            echo "AZURE_TENANT_ID is missing"
+            exit 1
+          fi
+
+          if [ -z "${{ secrets.AZURE_SUBSCRIPTION_ID }}" ]; then
+            echo "AZURE_SUBSCRIPTION_ID is missing"
+            exit 1
+          fi
+
+          echo "All Azure secrets are available"
+
+      # 3. Login to Azure using GitHub OIDC
       - name: Azure Login
         uses: azure/login@v2
         with:
@@ -37,19 +59,20 @@ jobs:
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
-      # 3. Login to Azure Container Registry
+      # 4. Login to Azure Container Registry
       - name: Login to ACR
-        run: az acr login --name ${{ env.ACR_NAME }}
+        run: |
+          az acr login --name ${{ env.ACR_NAME }}
 
-      # 4. Setup QEMU for ARM64 image build
+      # 5. Setup QEMU for ARM64 image build
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
 
-      # 5. Setup Docker Buildx
+      # 6. Setup Docker Buildx
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      # 6. Build and push Docker image to ACR
+      # 7. Build and push Docker image to ACR
       - name: Build and Push Docker Image
         uses: docker/build-push-action@v6
         with:
@@ -61,30 +84,48 @@ jobs:
             ${{ env.ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
             ${{ env.ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:latest
 
-      # 7. Get AKS credentials
+      # 8. Get AKS credentials
       - name: Get AKS Credentials
-        run: az aks get-credentials --resource-group ${{ env.AKS_RESOURCE_GROUP }} --name ${{ env.AKS_CLUSTER_NAME }} --admin --overwrite-existing
+        run: |
+          az aks get-credentials \
+            --resource-group ${{ env.AKS_RESOURCE_GROUP }} \
+            --name ${{ env.AKS_CLUSTER_NAME }} \
+            --admin \
+            --overwrite-existing
 
-      # 8. Apply Kubernetes manifests
+      # 9. Check Kubernetes connection
+      - name: Check AKS Connection
+        run: |
+          kubectl get nodes
+
+      # 10. Apply Kubernetes manifests
       - name: Apply Kubernetes Manifests
-        run: kubectl apply -f k8s/
+        run: |
+          kubectl apply -f k8s/
 
-      # 9. Update deployment with the new image
+      # 11. Update deployment with the new image
       - name: Update Kubernetes Deployment
-        run: kubectl set image deployment/employee-app employee-app=${{ env.ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+        run: |
+          kubectl set image deployment/employee-app \
+            employee-app=${{ env.ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
 
-      # 10. Wait for deployment rollout
-      - name: Wait for deployment rollout
-        run: kubectl rollout status deployment/employee-app --timeout=5m
+      # 12. Wait for deployment rollout
+      - name: Wait for Rollout
+        run: |
+          kubectl rollout status deployment/employee-app --timeout=5m
 
-      # 11. Verify pods
+      # 13. Verify Kubernetes pods
       - name: Verify Kubernetes Pods
-        run: kubectl get pods -o wide
+        run: |
+          kubectl get pods -o wide
 
-      # 12. Verify service
+      # 14. Verify Kubernetes service
       - name: Verify Kubernetes Service
-        run: kubectl get service employee-app-service
+        run: |
+          kubectl get service employee-app-service
 
-      # 13. Verify ingress
+      # 15. Verify Application Gateway ingress
       - name: Verify Application Gateway Ingress
-        run: kubectl get ingress employee-app-ingress
+        run: |
+          kubectl get ingress employee-app-ingress
+
