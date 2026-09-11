@@ -1,3 +1,4 @@
+
 name: Employee App CI/CD
 
 on:
@@ -32,9 +33,9 @@ jobs:
       - name: Azure Login
         uses: azure/login@v2
         with:
-          client-id: ${{ vars.AZURE_CLIENT_ID }}
-          tenant-id: ${{ vars.AZURE_TENANT_ID }}
-          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
       # 3. Login to Azure Container Registry
       - name: Login to ACR
@@ -53,7 +54,7 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
-          file: ./dockerfile
+          file: ./Dockerfile
           push: true
           platforms: linux/amd64,linux/arm64
           tags: |
@@ -73,7 +74,7 @@ jobs:
         run: kubectl set image deployment/employee-app employee-app=${{ env.ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
 
       # 10. Wait for deployment rollout
-      - name: Wait for Rollout
+      - name: Wait for deployment rollout
         run: kubectl rollout status deployment/employee-app --timeout=5m
 
       # 11. Verify pods
