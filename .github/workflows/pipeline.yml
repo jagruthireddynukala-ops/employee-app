@@ -59,7 +59,7 @@ jobs:
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
-      # 4. Verify Azure account
+      # 4. Verify Azure Login
       - name: Verify Azure Login
         shell: bash
         run: |
@@ -98,38 +98,67 @@ jobs:
             --name ${{ env.AKS_CLUSTER_NAME }} \
             --overwrite-existing
 
-      # 10. Check Kubernetes connection
+      # 10. Install kubelogin
+      - name: Install kubelogin
+        run: |
+          az aks install-cli
+
+      # 11. Convert kubeconfig for Azure CLI authentication
+      - name: Configure kubelogin
+        run: |
+          kubelogin convert-kubeconfig -l azurecli
+
+      # 12. Check Kubernetes connection
       - name: Check AKS Connection
         run: |
           kubectl get nodes
 
-      # 11. Apply Kubernetes manifests
+      # 13. Apply Kubernetes manifests
       - name: Apply Kubernetes Manifests
         run: |
           kubectl apply -f k8s/
 
-      # 12. Update deployment with new image
+      # 14. Update deployment with new image
       - name: Update Kubernetes Deployment
         run: |
           kubectl set image deployment/employee-app \
             employee-app=${{ env.ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
 
-      # 13. Wait for deployment rollout
+      # 15. Wait for deployment rollout
       - name: Wait for Rollout
         run: |
           kubectl rollout status deployment/employee-app --timeout=5m
 
-      # 14. Verify Kubernetes pods
+      # 16. Verify Kubernetes pods
       - name: Verify Kubernetes Pods
         run: |
           kubectl get pods -o wide
 
-      # 15. Verify Kubernetes service
+      # 17. Verify Kubernetes service
       - name: Verify Kubernetes Service
         run: |
           kubectl get service employee-app-service
 
-      # 16. Verify Application Gateway ingress
+      # 18. Verify Application Gateway ingress
       - name: Verify Application Gateway Ingress
         run: |
+          kubectl get ingress employee-app-ingress
+
+      # 19. Show final deployment status
+      - name: Final Deployment Status
+        run: |
+          echo "========================================"
+          echo "Employee App Deployment Completed"
+          echo "========================================"
+
+          echo ""
+          echo "Pods:"
+          kubectl get pods -o wide
+
+          echo ""
+          echo "Service:"
+          kubectl get service employee-app-service
+
+          echo ""
+          echo "Ingress:"
           kubectl get ingress employee-app-ingress
