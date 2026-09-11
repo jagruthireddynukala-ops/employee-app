@@ -96,7 +96,6 @@ jobs:
           az aks get-credentials \
             --resource-group ${{ env.AKS_RESOURCE_GROUP }} \
             --name ${{ env.AKS_CLUSTER_NAME }} \
-            --admin \
             --overwrite-existing
 
       # 10. Check Kubernetes connection
